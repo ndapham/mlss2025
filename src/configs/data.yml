@@ -1,0 +1,10 @@
+paths:
+  train: "data/input/train"
+  test: "data/input/test"
+  images: "images"
+  scribbles: "scribbles"
+  ground_truth: "ground_truth"
+  predictions: "predictions"
+
+visual:
+  visualize_random: True

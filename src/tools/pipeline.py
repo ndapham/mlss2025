@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Callable
-from util import load_dataset, store_predictions, visualize
+from src.utils.vis import visualize
+from src.utils.io import load_dataset, store_predictions
 
 # code taken from utils.py
 def run_pipeline(
@@ -52,7 +53,7 @@ def run_pipeline(
 
 if __name__ == "__main__":
     # example code 
-    from util import segment_with_knn
+    from src.models import segment_with_knn
     run_pipeline(segment_with_knn)
 
     
