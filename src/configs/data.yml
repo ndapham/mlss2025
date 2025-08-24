@@ -8,3 +8,14 @@ paths:
 
 visual:
   visualize_random: True
+
+
+unet:
+  in_ch: 4         # RGB (3) + scribble (1)
+  out_ch: 2        # foreground vs background
+
+training:
+  batch_size: 8
+  lr: 0.001
+  epochs: 50
+  device: "cuda"   # "cpu" or "cuda" 
