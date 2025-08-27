@@ -4,7 +4,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KNeighborsClassifier
 from typing import Any
-
+import torch
 
 ######### Methods for loading dataset
 
@@ -218,3 +218,40 @@ def visualize(
 
     plt.tight_layout()
     plt.show()
+
+#### eval metric with mIoU ####
+
+def evaluate_binary_miou(
+    predictions: np.ndarray,
+    ground_truths: np.ndarray,
+) -> dict[str, float]:
+    """
+    Compute IoU for background (class 0) and object (class 1), and return mean IoU (mIoU).
+
+    Args:
+        predictions: np.ndarray of shape (N, H, W) or (H, W) with values {0, 1}.
+        ground_truths: np.ndarray of shape (N, H, W) or (H, W) with values {0, 1}.
+
+    Returns:
+        Dict with keys:
+            - 'iou_background'
+            - 'iou_object'
+            - 'miou'
+    """
+
+    ious = {}
+    miou_accumulator = 0.0
+    for cls_label, cls_key in [(0, 'iou_background'), (1, 'iou_object')]:
+        pred_mask = (predictions == cls_label)
+        gt_mask = (ground_truths == cls_label)
+
+        intersection = np.logical_and(pred_mask, gt_mask).sum(dtype=np.float64)
+        union = np.logical_or(pred_mask, gt_mask).sum(dtype=np.float64)
+
+        # if a class is absent in both prediction and GT (union == 0), treat IoU as 1.0
+        iou = 1.0 if union == 0 else float(intersection / union)
+        ious[cls_key] = iou
+        miou_accumulator += iou
+
+    ious['miou'] = miou_accumulator / 2.0
+    return ious
