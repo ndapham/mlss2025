@@ -1,0 +1,10 @@
+imgaug
+opencv-python
+lxml
+torch
+torchvision
+torchsummary
+wandb
+Pillow
+tqdm
+yaml

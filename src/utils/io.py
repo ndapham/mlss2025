@@ -3,6 +3,12 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 from typing import Any
+import yaml
+
+def read_yaml_file(yaml_path):
+    with open(yaml_path, "r") as f:
+        inf = yaml.safe_load(f)
+    return inf
 
 
 def _open_image(path, convert_to):
@@ -17,26 +23,22 @@ def _get_file_names(folder):
         [file for file in os.listdir(folder) if not file.startswith('.')]
     )
 
-def _load_images(folder_path, folder_name, convert_to):
-    image_dir_path = os.path.join(folder_path, folder_name)
-    filenames = _get_file_names(image_dir_path)
+def _load_images(images_folder_path, convert_to):
+    filenames = _get_file_names(images_folder_path)
     filepaths = [
-        os.path.join(image_dir_path, filename) for filename in filenames
+        os.path.join(images_folder_path, filename) for filename in filenames
     ]
     return np.stack([_open_image(file, convert_to) for file in filepaths])
 
-def _get_palette(folder_path, ground_truth_dir, filename):
-    gt_dir_path = os.path.join(folder_path, ground_truth_dir)
-    filepath = os.path.join(gt_dir_path, filename)
+def _get_palette(ground_truth_dir, filename):
+    filepath = os.path.join(ground_truth_dir, filename)
     return Image.open(filepath).getpalette()
 
-def _get_filenames(folder_path, scribbles_dir):
-    sc_dir_path = os.path.join(folder_path, scribbles_dir)
-    filenames = _get_file_names(sc_dir_path)
+def _get_filenames(scribbles_dir):
+    filenames = _get_file_names(scribbles_dir)
     return filenames
 
 def load_dataset(
-    folder_path: str,
     images_dir: str,
     scribbles_dir: str,
     ground_truth_dir: str | None = None
@@ -59,14 +61,14 @@ def load_dataset(
         palette (_type_): _description_
     """
 
-    images = _load_images(folder_path, images_dir, "RGB")
-    scribbles = _load_images(folder_path, scribbles_dir, "grayscale")
-    filenames = _get_filenames(folder_path, scribbles_dir)
+    images = _load_images(images_dir, "RGB")
+    scribbles = _load_images(scribbles_dir, "grayscale")
+    filenames = _get_filenames(scribbles_dir)
     if ground_truth_dir is None:
         return images, scribbles, filenames
     
-    ground_truth = _load_images(folder_path, ground_truth_dir, None)
-    palette = _get_palette(folder_path, ground_truth_dir, filenames[0])
+    ground_truth = _load_images(ground_truth_dir, None)
+    palette = _get_palette(ground_truth_dir, filenames[0])
     return images, scribbles, ground_truth, filenames, palette
 
 def store_predictions(

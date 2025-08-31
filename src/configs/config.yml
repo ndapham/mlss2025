@@ -1,0 +1,23 @@
+paths:
+  train: "data/input/train"
+  test: "data/input/test1"
+  train_images: "data/input/train/images"
+  train_scribbles: "data/input/train/scribbles"
+  train_ground_truth: "data/input/train/ground_truth"
+  test_images: "data/input/test1/images"
+  test_scribbles: "data/input/test1/scribbles"
+  test_ground_truth: "data/input/test1/ground_truth"
+  predictions: "data/output/predictions"
+  checkpoints: "data/output/checkpoints"
+
+visual:
+  visualize_random: True
+
+wandb:
+  wandb_API: ""
+
+training:
+  batch_size: 32
+  lr: 0.001
+  dino_epoch: 0
+  epochs: 100

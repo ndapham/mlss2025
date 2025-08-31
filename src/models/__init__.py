@@ -1,1 +1,0 @@
-from baseline_knn import segment_with_knn

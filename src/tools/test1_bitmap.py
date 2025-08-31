@@ -3,15 +3,15 @@ import cv2
 import numpy as np
 import xml.etree.ElementTree as ET
 
-!pip install opencv-python
-!pip install lxml
 
 # Load XML
-tree = ET.parse("annotations.xml")
+tree = ET.parse("data/input/annotations.xml")
 root = tree.getroot()
 
 # Output folder
-out_dir = "test1_bitmap"
+out_dir = "data/input/test1/ground_truth"
+if not os.path.exists(out_dir):
+    os.makedirs(out_dir)
 os.makedirs(out_dir, exist_ok=True)
 
 for image_tag in root.findall("image"):
@@ -31,6 +31,6 @@ for image_tag in root.findall("image"):
         pts = pts.reshape((-1, 1, 2))
         cv2.fillPoly(mask, [pts], 255) 
 
-    base_name = os.path.splitext(name)[0] + "_mask.png"
+    base_name = os.path.splitext(name)[0] + ".png"
     out_path = os.path.join(out_dir, base_name)
     cv2.imwrite(out_path, mask)

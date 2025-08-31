@@ -1,100 +1,24 @@
 import os
+import random
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KNeighborsClassifier
 from typing import Any
+from sklearn.metrics import jaccard_score
 import torch
+from torch.nn.functional import softmax
 
-######### Methods for loading dataset
 
-def _open_image(path, convert_to):
-    if convert_to == "RGB":
-        return Image.open(path).convert("RGB")
-    if convert_to == "grayscale":
-        return Image.open(path).convert("L")
-    return np.array(Image.open(path))
-
-def _get_file_names(folder):
-    return sorted(
-        [file for file in os.listdir(folder) if not file.startswith('.')]
-    )
-
-def _load_images(folder_path, folder_name, convert_to):
-    image_dir_path = os.path.join(folder_path, folder_name)
-    filenames = _get_file_names(image_dir_path)
-    filepaths = [
-        os.path.join(image_dir_path, filename) for filename in filenames
-    ]
-    return np.stack([_open_image(file, convert_to) for file in filepaths])
-
-def _get_palette(folder_path, ground_truth_dir, filename):
-    gt_dir_path = os.path.join(folder_path, ground_truth_dir)
-    filepath = os.path.join(gt_dir_path, filename)
-    return Image.open(filepath).getpalette()
-
-def _get_filenames(folder_path, scribbles_dir):
-    sc_dir_path = os.path.join(folder_path, scribbles_dir)
-    filenames = _get_file_names(sc_dir_path)
-    return filenames
-
-def load_dataset(
-    folder_path: str,
-    images_dir: str,
-    scribbles_dir: str,
-    ground_truth_dir: str | None = None
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, Any]:
-    """
-    Load images, scribbles, and ground truth masks from a dataset folder.
-    
-    Args:
-        folder_path (str): Path to the dataset folder (e.g., 'dataset/training').
-        images_dir (str): folder name for images.
-        scribbles_dir (str): folder name for scribbles.
-        ground_truth_dir (str): folder name for ground truth images.
-        
-        
-    Returns:
-        images (np.ndarray): Array of shape (N, H, W, 3) with RGB images.
-        scribbles (np.ndarray): Array of shape (N, H, W) with scribble labels.
-        ground_truth (np.ndarray): Array of shape (N, H, W) with class labels.
-        filenames (list[str]): List of filenames for storing predictions
-        palette (_type_): _description_
-    """
-
-    images = _load_images(folder_path, images_dir, "RGB")
-    scribbles = _load_images(folder_path, scribbles_dir, "grayscale")
-    filenames = _get_filenames(folder_path, scribbles_dir)
-    if ground_truth_dir is None:
-        return images, scribbles, filenames
-    
-    ground_truth = _load_images(folder_path, ground_truth_dir, None)
-    palette = _get_palette(folder_path, ground_truth_dir, filenames[0])
-    return images, scribbles, ground_truth, filenames, palette
-
-def store_predictions(
-    predictions: np.ndarray,
-    folder_path: str,
-    predictions_dir: str,
-    filenames: list[str],
-    palette: Any
-):
-    """Takes a stack of segmented images and stores them indvidually in the given folder.
-
-    Args:
-        predictions (np.ndarray): Array of shape (N, H, W) with predicted class labels.
-        folder_path (str): Path to the dataset folder (e.g., 'dataset/training').
-        predictions_dir (str): folder name for predictions.
-        storage_info (Any): Useful info from load_dataset method for storing.
-    """
-    pred_dir_path = os.path.join(folder_path, predictions_dir)
-    if not os.path.exists(pred_dir_path):
-        os.makedirs(pred_dir_path)
-    for filename, pred_array in zip(filenames, predictions):
-        filepath = os.path.join(pred_dir_path, filename)
-        pred_image = Image.fromarray(pred_array.astype(np.uint8), mode='P')
-        pred_image.putpalette(palette)
-        pred_image.save(filepath)
+######### Reproducibility
+def set_seed(seed: int = 33):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 ######### Methods for baseline model
@@ -152,74 +76,27 @@ def segment_with_knn(
     return predicted_mask.reshape(H, W)
 
 
-######### Methods for visualization
 
-def _overlay_scribbles(
-    image, scribble, color_fg=(255, 0, 0), color_bg=(0, 0, 255), alpha=0.6
-):
-    if image.ndim != 3 or image.shape[2] != 3:
-        raise ValueError("Input image must be RGB")
-    if scribble.shape != image.shape[:2]:
-        raise ValueError("Scribble must match image spatial size")
-    
-    overlaid = image.copy().astype(np.float32)
-    
-    mask_fg = scribble == 1
-    mask_bg = scribble == 0
-    
-    for mask, color in [(mask_fg, color_fg), (mask_bg, color_bg)]:
-        for c in range(3):
-            overlaid[..., c][mask] = (
-                alpha * color[c] + (1 - alpha) * overlaid[..., c][mask]
-            )
-    
-    return overlaid.astype(np.uint8)
-
-def visualize(
-    image: np.ndarray,
-    scribbles: np.ndarray,
-    ground_truth: np.ndarray,
-    prediction: np.ndarray,
-    alpha: float=0.6
-):
-    """
-    Shows a 1x3 subplot of:
-      1. Original image overlaid with scribbles
-      2. Ground truth segmentation mask
-      3. Prediction mask
-      
-      Blue = background, Red = foreground.
-
-    Parameters:
-        image (H, W, 3)        : RGB image
-        scribbles (H, W)       : scribble mask with values {0, 1, 255}
-        ground_truth (H, W)    : ground truth mask with values {0, 1}
-        prediction (H, W)      : predicted mask with values {0, 1}
-        alpha (float)          : alpha blending for overlay
-    """
-    
-    image_with_scribbles = _overlay_scribbles(image, scribbles, alpha=alpha)
-    
-    cmap = plt.get_cmap('bwr')
-    
-    _, axes = plt.subplots(1, 3, figsize=(15, 5))
-    
-    axes[0].imshow(image_with_scribbles)
-    axes[0].set_title("Image + Scribbles")
-
-    axes[1].imshow(ground_truth, cmap=cmap, vmin=0, vmax=1)
-    axes[1].set_title("Ground Truth")
-
-    axes[2].imshow(prediction, cmap=cmap, vmin=0, vmax=1)
-    axes[2].set_title("Model Prediction")
-
-    for ax in axes:
-        ax.axis("off")
-
-    plt.tight_layout()
-    plt.show()
 
 #### eval metric with mIoU ####
+def iou(logits, label):
+    """
+    :param logits: outputs of model
+    :param label: ground-truth masks
+    :return:
+    """
+    predicts = softmax(logits)
+    predicts = torch.argmax(predicts, dim=1)
+    predicts = torch.reshape(predicts, [predicts.shape[0], -1]).numpy()
+    label = torch.reshape(label, [label.shape[0], -1]).numpy()
+
+    average_score = 0
+    for p, l in zip(predicts, label):
+        score = jaccard_score(p, l, average='macro')
+        average_score += score
+
+    return average_score / len(predicts)
+
 
 def evaluate_binary_miou(
     predictions: np.ndarray,

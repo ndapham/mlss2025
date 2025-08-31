@@ -2,15 +2,33 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-##from: https://code.likeagirl.io/u-net-vs-residual-u-net-vs-attention-u-net-vs-attention-residual-u-net-899b57c5698
+
+
+class Up(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(Up, self).__init__()
+        self.up_scale = nn.ConvTranspose2d(in_ch, out_ch, kernel_size=2, stride=2)
+
+    def forward(self, x1, x2):
+        x2 = self.up_scale(x2)
+
+        diffY = x1.size()[2] - x2.size()[2]
+        diffX = x1.size()[3] - x2.size()[3]
+
+        x2 = F.pad(x2, [diffX // 2, diffX - diffX // 2,
+                        diffY // 2, diffY - diffY // 2])
+        return x2
+    
 
 class ResidualConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         )
         
@@ -43,7 +61,7 @@ class AttentionBlock(nn.Module):
         return x * psi_f
 
 class ResAttentionUNet(nn.Module):
-    def __init__(self, in_channels=4, num_classes=2):
+    def __init__(self, in_channels=4, out_channels=1):
         super().__init__()
 
         self.enc1 = ResidualConvBlock(in_channels, 32)
@@ -57,44 +75,46 @@ class ResAttentionUNet(nn.Module):
 
         self.bottleneck = ResidualConvBlock(128, 256)
 
-        self.up4 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.up4 = Up(256, 128)
         self.att4 = AttentionBlock(in_channels=128, gating_channels=128, inter_channels=64)
         self.dec4 = ResidualConvBlock(256, 128)
 
-        self.up5 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        self.up5 = Up(128, 64)
         self.att5 = AttentionBlock(in_channels=64, gating_channels=64, inter_channels=32)
         self.dec5 = ResidualConvBlock(128, 64)
 
-        self.up6 = nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2)
+        self.up6 = Up(64, 32)
+        self.att6 = AttentionBlock(in_channels=32, gating_channels=32, inter_channels=32)
         self.dec6 = ResidualConvBlock(64, 32)
 
-        self.out_conv = nn.Conv2d(32, num_classes, kernel_size=1)
+        self.out_conv = nn.Conv2d(32, out_channels, kernel_size=1)
 
     def forward(self, x):
 
-        c1 = self.enc1(x)
-        p1 = self.pool1(c1)
+        c1 = self.enc1(x)   # (B, 32, W, H) 
+        p1 = self.pool1(c1) # (B, 32, W/2, H/2)
 
-        c2 = self.enc2(p1)
-        p2 = self.pool2(c2)
+        c2 = self.enc2(p1)  # (B, 64, W/2, H/2)
+        p2 = self.pool2(c2) # (B, 64, W/4, H/4)
 
-        c3 = self.enc3(p2)
-        p3 = self.pool3(c3)
+        c3 = self.enc3(p2)  # (B, 128, W/4, H/4)
+        p3 = self.pool3(c3) # (B, 128, W/8, H/8)
 
-        b = self.bottleneck(p3)
+        b = self.bottleneck(p3) # (B, 256, W/8, H/8)
 
-        u4 = self.up4(b)
-        c2_att = self.att4(c2, u4)
-        u4 = torch.cat([u4, c2_att], dim=1)
-        c4 = self.dec4(u4)
+        u4 = self.up4(c3, b)    # (B, 128, W/4, H/4)
+        c3_att = self.att4(c3, u4)  # (B, 128, W/4, H/4)
+        u4 = torch.cat([u4, c3_att], dim=1) # (B, 256, W/4, H/4)
+        c4 = self.dec4(u4)  # (B, 128, W/4, H/4)
 
-        u5 = self.up5(c4)
-        c1_att = self.att5(c1, u5)
-        u5 = torch.cat([u5, c1_att], dim=1)
+        u5 = self.up5(c2, c4)   # (B, 64, W/2, H/2)
+        c2_att = self.att5(c2, u5) 
+        u5 = torch.cat([u5, c2_att], dim=1)
         c5 = self.dec5(u5)
 
-        u6 = self.up6(c5)
-        u6 = torch.cat([u6, c1], dim=1)
+        u6 = self.up6(c1, c5)
+        c1_att = self.att6(c1, u6) 
+        u6 = torch.cat([u6, c1_att], dim=1)
         c6 = self.dec6(u6)
 
         out = self.out_conv(c6)

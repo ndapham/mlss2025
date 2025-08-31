@@ -58,7 +58,7 @@ class UpLayer(nn.Module):
 
 
 class UNet(nn.Module):
-    def __init__(self, in_ch=4, out_ch=2):
+    def __init__(self, in_ch=4, out_ch=1):
         
         super(UNet, self).__init__()
         self.conv1 = DoubleConv(in_ch, 64)
