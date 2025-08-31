@@ -37,7 +37,7 @@ class ScribbleDataset(Dataset):
             image, scribble, annotation = self.augmentation(image, scribble, annotation)
         image = self.transform(image)
         image = torch.as_tensor(image, dtype=torch.float32)
-        scribble = torch.as_tensor(PILToTensor(scribble), dtype=torch.float32)
+        scribble = torch.as_tensor(PILToTensor(scribble)/255, dtype=torch.float32)
         annotation = torch.as_tensor(PILToTensor(annotation), dtype=torch.float32)
         return image, scribble, annotation, fname
 

@@ -79,24 +79,6 @@ def segment_with_knn(
 
 
 #### eval metric with mIoU ####
-def iou(logits, label):
-    """
-    :param logits: outputs of model
-    :param label: ground-truth masks
-    :return:
-    """
-    predicts = softmax(logits)
-    predicts = torch.argmax(predicts, dim=1)
-    predicts = torch.reshape(predicts, [predicts.shape[0], -1]).numpy()
-    label = torch.reshape(label, [label.shape[0], -1]).numpy()
-
-    average_score = 0
-    for p, l in zip(predicts, label):
-        score = jaccard_score(p, l, average='macro')
-        average_score += score
-
-    return average_score / len(predicts)
-
 
 def evaluate_binary_miou(
     predictions: np.ndarray,

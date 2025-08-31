@@ -29,7 +29,7 @@ for image_tag in root.findall("image"):
         ], np.int32)
 
         pts = pts.reshape((-1, 1, 2))
-        cv2.fillPoly(mask, [pts], 255) 
+        cv2.fillPoly(mask, [pts], 1) 
 
     base_name = os.path.splitext(name)[0] + ".png"
     out_path = os.path.join(out_dir, base_name)
