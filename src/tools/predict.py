@@ -23,13 +23,22 @@ from src.criterion.metric_based import DiceBCELoss
 from src.models.dino import *
 
 if __name__ == "__main__":
-    checkpoint_path = "/Users/pducanh/Desktop/mlss2025/data/output/checkpoints/unet_100_88_0.5952545125453903.pt"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--checkpoint_path", type=str, default="/Users/pducanh/Desktop/mlss2025/data/output/checkpoints/unet_100_88_0.5952545125453903.pt")
+    parser.add_argument('--config_path', type=str)
+
+    args = parser.parse_args()
+    checkpoint_path = args.checkpoint_path
+    config_path = args.config_path 
+    cfg = read_yaml_file(config_path)
+
+
     file_name = checkpoint_path.split("/")[-1]
-    print(file_name)
+    print(f"Loading checkpoint: {file_name} ...")
 
     model_name = file_name.split("_")[0]
 
-    prediction_folder= "/Users/pducanh/Desktop/mlss2025/data/output/predictions"
+    prediction_folder= cfg["paths"]["predictions"]
     output_folder_path = os.path.join(prediction_folder, file_name)
     if not os.path.exists(output_folder_path):
         os.makedirs(output_folder_path)
@@ -46,9 +55,9 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(checkpoint_path, map_location= "cpu"))
     print("Model loaded ...")
 
-    test_images_folder = "/Users/pducanh/Desktop/mlss2025/data/input/test1/images"
-    test_scribbles_folder = "/Users/pducanh/Desktop/mlss2025/data/input/test1/scribbles"
-    test_ground_truth_folder = "/Users/pducanh/Desktop/mlss2025/data/input/test1/ground_truth"
+    test_images_folder = cfg["paths"]["test_images"]
+    test_scribbles_folder = cfg["paths"]["test_scribbles"]
+    test_ground_truth_folder = cfg["paths"]["test_ground_truth"]
 
     images_test, scrib_test, gt_test, fnames_test, palette = load_dataset(
        test_images_folder, test_scribbles_folder, test_ground_truth_folder
