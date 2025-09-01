@@ -1,1 +1,1 @@
-# This folder includes media files for README.md 
+# This folder includes reports or related files. 
