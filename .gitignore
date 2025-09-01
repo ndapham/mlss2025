@@ -199,3 +199,4 @@ data/output/predictions/*
 
 data/output/.DS_Store
 data/output/checkpoints/*.pt
+.DS_Store
