@@ -7,4 +7,7 @@ torchsummary
 wandb
 Pillow
 tqdm
-yaml
+pyyaml
+numpy 
+matplotlib
+scikit-learn
