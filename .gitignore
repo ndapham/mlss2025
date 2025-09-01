@@ -193,6 +193,9 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-.data/input/test1/
-.data/input/train/
-.data/input/annotations.xml
+data/input/*
+data/output/checkpoints/*.pt
+data/output/predictions/*
+
+data/output/.DS_Store
+data/output/checkpoints/*.pt

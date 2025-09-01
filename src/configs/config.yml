@@ -20,4 +20,4 @@ training:
   batch_size: 32
   lr: 0.001
   dino_epoch: 0
-  epochs: 100
+  epochs: 1000
