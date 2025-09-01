@@ -32,7 +32,7 @@ Training checkpoints are saved in the folder specified in `config.yml`.
 
 Run this command to create a folder of mask images based on the checkpoint you are using
 ```
-python3 --checkpoint_path /path/to/your/checkpoint --config_path your/config.yml
+python3 predict.py --checkpoint_path /path/to/your/checkpoint --config_path your/config.yml
 ```
 
 The output images will be saved in a folder named after the checkpoint, located inside the predictions directory specified in your `config.yml`.
