@@ -8,7 +8,7 @@ Check out our report [here](https://github.com/ndapham/mlss2025/blob/main/assets
 
 Clone this project:
 ```
-git clone git@github.com:ndapham/mlss2025.git
+git clone https://github.com/ndapham/mlss2025.git
 ```
 
 Download data and install necessary packages:
